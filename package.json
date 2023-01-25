@@ -1,0 +1,7 @@
+{
+  "name": "@pubby-club/emojis",
+  "scripts": {
+    "build": "node ./convert/index.mjs",
+    "build:data": "node ./unicode.mjs"
+  }
+}
