@@ -132,7 +132,7 @@ function emojiNode(emoji) {
   return xml_node(
     "emoji",
     {
-      id: emoji.codes.replace(" ", "_"),
+      id: emoji.codes.replace(/\s+/g, "_"),
       text: emoji.emoji,
       desc: emoji.description,
       version: emoji.version,
