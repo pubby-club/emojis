@@ -1,7 +1,14 @@
 {
   "name": "@pubby-club/emojis",
   "scripts": {
-    "build": "node ./convert/index.mjs",
-    "build:data": "node ./unicode.mjs"
+    "build:data": "node build_unicode_data.mjs",
+    "build:svg": "node ./build_svg.mjs",
+    "build:webp": "node ./build_webp.mjs",
+    "build": "npm run build:data && npm run build:svg && npm run build:webp"
+  },
+  "dependencies": {
+    "adm-zip": "^0.5.10",
+    "octokit": "^2.0.14",
+    "sharp": "^0.31.3"
   }
 }
