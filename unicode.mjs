@@ -14,16 +14,29 @@ function encode(text) {
 const data = await fetch(
   "https://unicode.org/Public/emoji/15.0/emoji-test.txt"
 );
-const shortcodes = await fetch(
-  "https://raw.githubusercontent.com/milesj/emojibase/master/packages/data/en/shortcodes/emojibase.raw.json"
+const ordering = await fetch(
+  "https://raw.githubusercontent.com/googlefonts/emoji-metadata/main/emoji_15_0_ordering.json"
 )
   .then((r) => r.json())
   .then((json) => {
     const result = {};
 
-    for (const [codepoint, codes] of Object.entries(json)) {
-      result[codepoint] ??= [];
-      result[codepoint].push(...[].concat(codes));
+    for (const group of json) {
+      for (const emoji of group.emoji) {
+        const codepoint = emoji.base
+          .map((c) => c.toString(16).toUpperCase().padStart(4, "0"))
+          .join(" ");
+
+        if (!result[codepoint]) {
+          result[codepoint] = {
+            shortcodes: emoji.shortcodes.map((s) =>
+              s.substring(1, s.length - 1)
+            ),
+            emoticons: emoji.emoticons,
+            animated: emoji.animated,
+          };
+        }
+      }
     }
 
     return result;
@@ -65,7 +78,8 @@ for await (const line of lines) {
     description,
     version,
     skin_tones: [],
-    aliases: shortcodes[codes] ?? [],
+    shortcodes: ordering[codes]?.shortcodes ?? [],
+    emoticons: ordering[codes]?.emoticons ?? [],
   };
 
   if (description.includes("skin tone")) {
@@ -87,16 +101,26 @@ function xml_node(name, attrs = {}, children = []) {
 function emojiNode(emoji) {
   const children = [];
 
-  if (emoji.aliases.length > 0) {
+  if (emoji.shortcodes.length > 0) {
     children.push(
-      ...emoji.aliases.map((alias) => xml_node("alias", { text: alias }))
+      ...emoji.shortcodes.map((shortcode) =>
+        xml_node("shortcode", { text: shortcode })
+      )
+    );
+  }
+
+  if (emoji.emoticons.length > 0) {
+    children.push(
+      ...emoji.emoticons.map((emoticon) =>
+        xml_node("emoticon", { text: emoticon })
+      )
     );
   }
 
   if (emoji.skin_tones.length > 0) {
     children.push(
       xml_node(
-        "variant",
+        "alternate",
         {
           type: "skin-tone",
         },
@@ -108,9 +132,9 @@ function emojiNode(emoji) {
   return xml_node(
     "emoji",
     {
+      id: emoji.codes.replace(" ", "_"),
       text: emoji.emoji,
-      codes: emoji.codes,
-      description: emoji.description,
+      desc: emoji.description,
       version: emoji.version,
     },
     children
@@ -125,7 +149,7 @@ const xmlDocument = xml_node(
   groups.map((name, i) =>
     xml_node(
       "group",
-      { name },
+      { id: name.toLocaleLowerCase().replace(/\s+/g, "_").replace("&", "and") },
       emojis
         .filter((emoji) => emoji.group === i)
         .map((emoji) => emojiNode(emoji))
@@ -201,7 +225,8 @@ await writeFile(
     emojis.map((e) => ({
       emoji: e.emoji,
       category: groups[e.group],
-      aliases: e.aliases.length ? e.aliases : undefined,
+      shortcodes: e.shortcodes.length ? e.shortcodes : undefined,
+      emoticons: e.emoticons.length ? e.emoticons : undefined,
       skin_tones: e.skin_tones.length
         ? e.skin_tones.map((e) => ({
             emoji: e.emoji,
